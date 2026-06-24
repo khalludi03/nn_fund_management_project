@@ -15,3 +15,6 @@ access_approval_log_admin,nn.approval.log.admin,model_nn_approval_log,nn_fund_ma
 access_fund_allocation_user,nn.fund.allocation.user,model_nn_fund_allocation,nn_fund_management.group_fund_user,1,1,1,0
 access_fund_allocation_finance,nn.fund.allocation.finance,model_nn_fund_allocation,nn_fund_management.group_finance_user,1,1,0,0
 access_fund_allocation_admin,nn.fund.allocation.admin,model_nn_fund_allocation,nn_fund_management.group_fund_admin,1,1,1,1
+access_fund_requisition_user,nn.fund.requisition.user,model_nn_fund_requisition,nn_fund_management.group_fund_user,1,1,1,0
+access_fund_requisition_finance,nn.fund.requisition.finance,model_nn_fund_requisition,nn_fund_management.group_finance_user,1,1,0,0
+access_fund_requisition_admin,nn.fund.requisition.admin,model_nn_fund_requisition,nn_fund_management.group_fund_admin,1,1,1,1

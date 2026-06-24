@@ -100,24 +100,50 @@ class NnFundContainer(models.Model):
         'container_id',
         string='Allocations',
     )
+    requisition_ids = fields.One2many(
+        'nn.fund.requisition',
+        'container_id',
+        string='Requisitions',
+    )
 
     # ── Compute ──────────────────────────────────────────
     @api.depends(
         'allocation_ids.state',
         'allocation_ids.amount',
+        'requisition_ids.state',
+        'requisition_ids.amount',
     )
     def _compute_balances(self):
         for rec in self:
-            approved = self.env['nn.fund.allocation'].search([
+            # ── Total Allocated ───────────────────────────
+            approved_alloc = self.env['nn.fund.allocation'].search([
                 ('container_id', '=', rec.id),
                 ('state', '=', 'approved'),
             ])
-            rec.total_allocated = sum(approved.mapped('amount'))
-            rec.requisition_hold  = 0.0
+            rec.total_allocated = sum(
+                approved_alloc.mapped('amount')
+            )
+
+            # ── Requisition Hold ──────────────────────────
+            hold_reqs = self.env['nn.fund.requisition'].search([
+                ('container_id', '=', rec.id),
+                ('state', 'in', (
+                    'submitted', 'gm_approved', 'approved'
+                )),
+            ])
+            rec.requisition_hold = sum(
+                hold_reqs.mapped('amount')
+            )
+
+            # ── Total Spent ───────────────────────────────
+            rec.total_spent = 0.0
+
+            # ── Transfer fields (placeholder) ────────────
             rec.transfer_hold     = 0.0
             rec.incoming_transfer = 0.0
             rec.outgoing_transfer = 0.0
-            rec.total_spent       = 0.0
+
+            # ── Available Balance ─────────────────────────
             rec.available_balance = (
                 rec.total_allocated
                 + rec.incoming_transfer
