@@ -71,6 +71,22 @@ class NnFundBill(models.Model):
                 )
         return super().create(vals_list)
 
+    def write(self, vals):
+        for rec in self:
+            if rec.state == 'posted' and list(vals.keys()) != ['state']:
+                raise UserError("Cannot modify a posted bill.")
+            if rec.state == 'cancelled':
+                raise UserError("Cannot modify a cancelled bill.")
+        return super().write(vals)
+
+    def unlink(self):
+        for rec in self:
+            if rec.state in ('posted', 'cancelled'):
+                raise UserError(
+                    "Cannot delete a posted or cancelled bill."
+                )
+        return super().unlink()
+
     @api.constrains('amount')
     def _check_positive_amount(self):
         for rec in self:
@@ -131,6 +147,7 @@ class NnFundBill(models.Model):
             elif rec.state == 'cancelled':
                 raise UserError("Bill is already cancelled.")
             rec.state = 'cancelled'
+            rec.requisition_id.sudo()._compute_bill_amounts()
             rec.requisition_id.container_id.sudo()._compute_balances()
             rec.message_post(
                 body=f"Bill cancelled by {rec.env.user.name}."
