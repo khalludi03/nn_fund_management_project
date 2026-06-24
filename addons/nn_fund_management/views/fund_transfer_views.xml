@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_nn_fund_transfer_tree" model="ir.ui.view">
+        <field name="name">nn.fund.transfer.tree</field>
+        <field name="model">nn.fund.transfer</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="name"/>
+                <field name="source_id"/>
+                <field name="destination_id"/>
+                <field name="amount"/>
+                <field name="state"/>
+                <field name="requested_by"/>
+                <field name="request_date"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_nn_fund_transfer_form" model="ir.ui.view">
+        <field name="name">nn.fund.transfer.form</field>
+        <field name="model">nn.fund.transfer</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_submit"
+                            string="Submit"
+                            type="object"
+                            class="btn-primary"/>
+                    <button name="action_gm_approve"
+                            string="GM Approve"
+                            type="object"/>
+                    <button name="action_md_approve"
+                            string="MD Approve"
+                            type="object"/>
+                    <button name="action_reject"
+                            string="Reject"
+                            type="object"/>
+                    <button name="action_cancel"
+                            string="Cancel"
+                            type="object"/>
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <h1>
+                        <field name="name"/>
+                    </h1>
+                    <group>
+                        <group>
+                            <field name="source_id"/>
+                            <field name="destination_id"/>
+                            <field name="amount"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                        <group>
+                            <field name="request_date"/>
+                            <field name="requested_by"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+                    <group>
+                        <field name="reason"/>
+                    </group>
+                    <group string="Approval History">
+                        <field name="approval_log_ids">
+                            <tree>
+                                <field name="date"/>
+                                <field name="level"/>
+                                <field name="action"/>
+                                <field name="approver_id"/>
+                            </tree>
+                        </field>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_nn_fund_transfer_search" model="ir.ui.view">
+        <field name="name">nn.fund.transfer.search</field>
+        <field name="model">nn.fund.transfer</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="source_id"/>
+                <field name="destination_id"/>
+                <field name="state"/>
+                <field name="requested_by"/>
+                <filter name="filter_draft"
+                        string="Draft"
+                        domain="[('state','=','draft')]"/>
+                <filter name="filter_submitted"
+                        string="Submitted"
+                        domain="[('state','=','submitted')]"/>
+                <filter name="filter_approved"
+                        string="Approved"
+                        domain="[('state','=','approved')]"/>
+                <separator/>
+                <filter name="filter_my"
+                        string="My Transfers"
+                        domain="[('requested_by','=',uid)]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_nn_fund_transfer" model="ir.actions.act_window">
+        <field name="name">Fund Transfers</field>
+        <field name="res_model">nn.fund.transfer</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_nn_fund_transfer_search"/>
+        <field name="help" type="html">
+            <p>Transfer funds between projects and expense heads.</p>
+        </field>
+    </record>
+
+    <menuitem id="menu_fund_transfer"
+              name="Fund Transfers"
+              parent="menu_fund_management_root"
+              sequence="40"
+              action="action_nn_fund_transfer"/>
+
+</odoo>

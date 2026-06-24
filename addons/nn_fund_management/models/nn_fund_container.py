@@ -135,9 +135,31 @@ class NnFundContainer(models.Model):
             ])
             rec.total_spent = sum(posted_bills.mapped('amount'))
 
-            rec.transfer_hold     = 0.0
-            rec.incoming_transfer = 0.0
-            rec.outgoing_transfer = 0.0
+            hold_transfers = self.env['nn.fund.transfer'].search([
+                ('source_id', '=', rec.id),
+                ('state', 'in', (
+                    'submitted', 'gm_approved'
+                )),
+            ])
+            rec.transfer_hold = sum(
+                hold_transfers.mapped('amount')
+            )
+
+            approved_src = self.env['nn.fund.transfer'].search([
+                ('source_id', '=', rec.id),
+                ('state', '=', 'approved'),
+            ])
+            rec.outgoing_transfer = sum(
+                approved_src.mapped('amount')
+            )
+
+            approved_dst = self.env['nn.fund.transfer'].search([
+                ('destination_id', '=', rec.id),
+                ('state', '=', 'approved'),
+            ])
+            rec.incoming_transfer = sum(
+                approved_dst.mapped('amount')
+            )
 
             rec.available_balance = (
                 rec.total_allocated
