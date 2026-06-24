@@ -134,16 +134,33 @@
                     <notebook>
                         <page string="Bills"
                               invisible="state not in ('approved','closed')">
-                            <field name="bill_ids" readonly="1">
-                                <tree>
+                            <field name="bill_ids">
+                                <tree editable="bottom"
+                                      decoration-success="state=='posted'"
+                                      decoration-danger="state=='cancelled'">
                                     <field name="name"/>
                                     <field name="date"/>
-                                    <field name="amount"/>
+                                    <field name="amount"
+                                           sum="Total"/>
                                     <field name="state"
                                            widget="badge"
                                            decoration-success="state=='posted'"
                                            decoration-warning="state=='draft'"
                                            decoration-danger="state=='cancelled'"/>
+                                    <button name="action_post"
+                                            string="Post"
+                                            type="object"
+                                            class="btn-success"
+                                            groups="nn_fund_management.group_finance_user"
+                                            invisible="state != 'draft'"
+                                            icon="fa-check"/>
+                                    <button name="action_cancel"
+                                            string="Cancel Bill"
+                                            type="object"
+                                            class="btn-danger"
+                                            groups="nn_fund_management.group_finance_user"
+                                            invisible="state != 'draft'"
+                                            icon="fa-times"/>
                                 </tree>
                             </field>
                         </page>

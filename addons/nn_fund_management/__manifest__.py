@@ -15,6 +15,7 @@
         'views/approval_config_views.xml',
         'views/fund_allocation_views.xml',
         'views/fund_requisition_views.xml',
+        'views/fund_bill_views.xml',
     ],
     'installable': True,
     'application': True,

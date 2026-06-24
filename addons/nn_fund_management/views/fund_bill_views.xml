@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_fund_bill_tree" model="ir.ui.view">
+        <field name="name">nn.fund.bill.tree</field>
+        <field name="model">nn.fund.bill</field>
+        <field name="arch" type="xml">
+            <tree decoration-success="state=='posted'"
+                  decoration-danger="state=='cancelled'">
+                <field name="name"/>
+                <field name="date"/>
+                <field name="requisition_id"/>
+                <field name="amount"/>
+                <field name="currency_id" invisible="1"/>
+                <field name="state"
+                       widget="badge"
+                       decoration-success="state=='posted'"
+                       decoration-warning="state=='draft'"
+                       decoration-danger="state=='cancelled'"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_fund_bill_form" model="ir.ui.view">
+        <field name="name">nn.fund.bill.form</field>
+        <field name="model">nn.fund.bill</field>
+        <field name="arch" type="xml">
+            <form string="Fund Bill">
+                <header>
+                    <button name="action_post"
+                            string="Post"
+                            type="object"
+                            class="btn-primary"
+                            groups="nn_fund_management.group_finance_user"
+                            invisible="state != 'draft'"/>
+                    <button name="action_cancel"
+                            string="Cancel"
+                            type="object"
+                            class="btn-danger"
+                            groups="nn_fund_management.group_finance_user"
+                            invisible="state not in ('draft','posted')"/>
+                    <field name="state"
+                           widget="statusbar"
+                           statusbar_visible="draft,posted"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" readonly="1"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="requisition_id"/>
+                            <field name="amount"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                        <group>
+                            <field name="date"/>
+                            <field name="company_id" readonly="1"/>
+                        </group>
+                    </group>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_fund_bill" model="ir.actions.act_window">
+        <field name="name">Bills</field>
+        <field name="res_model">nn.fund.bill</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <menuitem
+        id="menu_fund_bill"
+        name="Bills"
+        parent="menu_fund_management_root"
+        action="action_fund_bill"
+        sequence="50"/>
+
+</odoo>

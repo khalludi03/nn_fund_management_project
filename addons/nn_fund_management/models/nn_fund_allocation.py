@@ -166,14 +166,14 @@ class NnFundAllocation(models.Model):
     def action_gm_approve(self):
         for rec in self:
             if rec.state != 'submitted':
-raise UserError(
+                raise UserError(
                     "GM approval is only allowed in Submitted state."
                 )
 
             config = rec._get_approval_config()
 
             if rec.env.user != config.gm_user_id:
-raise UserError(
+                raise UserError(
                     "Only the configured GM can approve this request."
                 )
 
@@ -198,14 +198,14 @@ raise UserError(
     def action_md_approve(self):
         for rec in self:
             if rec.state != 'gm_approved':
-raise UserError(
+                raise UserError(
                     "MD approval is only allowed after GM approval."
                 )
 
             config = rec._get_approval_config()
 
             if rec.env.user != config.md_user_id:
-raise UserError(
+                raise UserError(
                     "Only the configured MD can approve this request."
                 )
 
@@ -236,7 +236,7 @@ raise UserError(
     def action_reject(self):
         for rec in self:
             if rec.state not in ('submitted', 'gm_approved'):
-raise UserError(
+                raise UserError(
                     "Rejection is only allowed in Submitted or GM Approved state."
                 )
 
@@ -245,13 +245,13 @@ raise UserError(
 
             if rec.state == 'submitted':
                 if current_user != config.gm_user_id:
-raise UserError(
+                    raise UserError(
                         "Only the GM can reject at this stage."
                     )
                 level = 'gm'
             else:
                 if current_user != config.md_user_id:
-raise UserError(
+                    raise UserError(
                         "Only the MD can reject at this stage."
                     )
                 level = 'md'
@@ -284,7 +284,7 @@ raise UserError(
                         "allocation."
                     )
             if rec.state in ('rejected', 'cancelled'):
-raise UserError(
+                raise UserError(
                     "Rejected or cancelled records cannot be cancelled again."
                 )
             rec.state = 'cancelled'

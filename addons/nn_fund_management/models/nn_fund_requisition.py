@@ -295,8 +295,15 @@ class NnFundRequisition(models.Model):
 
     def action_cancel(self):
         for rec in self:
-            if rec.state in ('approved', 'rejected',
-                             'cancelled', 'closed'):
+            if rec.state == 'approved':
+                if not self.env.user.has_group(
+                    'nn_fund_management.group_fund_admin'
+                ):
+                    raise UserError(
+                        "Only an Administrator can cancel an approved "
+                        "requisition."
+                    )
+            elif rec.state in ('rejected', 'cancelled', 'closed'):
                 raise UserError(
                     "Cannot cancel in this state."
                 )
@@ -308,6 +315,12 @@ class NnFundRequisition(models.Model):
 
     def action_close(self):
         for rec in self:
+            if not self.env.user.has_group(
+                'nn_fund_management.group_finance_user'
+            ):
+                raise UserError(
+                    "Only a Finance User can close a requisition."
+                )
             if rec.state != 'approved':
                 raise UserError(
                     "Only approved requisitions can be closed."

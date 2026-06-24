@@ -129,7 +129,11 @@ class NnFundContainer(models.Model):
                 hold_reqs.mapped('amount')
             )
 
-            rec.total_spent = 0.0
+            posted_bills = self.env['nn.fund.bill'].search([
+                ('requisition_id.container_id', '=', rec.id),
+                ('state', '=', 'posted'),
+            ])
+            rec.total_spent = sum(posted_bills.mapped('amount'))
 
             rec.transfer_hold     = 0.0
             rec.incoming_transfer = 0.0
