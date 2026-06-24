@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="rule_fund_account_company"
+                model="ir.rule">
+            <field name="name">
+                Fund Account: Company Filter
+            </field>
+            <field name="model_id"
+                   ref="model_nn_fund_account"/>
+            <field name="groups"
+                   eval="[
+                       (4, ref('group_fund_user')),
+                       (4, ref('group_finance_user')),
+                   ]"/>
+            <field name="domain_force">
+                [('company_id', 'in', company_ids)]
+            </field>
+            <field name="perm_read"  eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <record id="rule_incoming_fund_company"
+                model="ir.rule">
+            <field name="name">
+                Incoming Fund: Company Filter
+            </field>
+            <field name="model_id"
+                   ref="model_nn_incoming_fund"/>
+            <field name="groups"
+                   eval="[
+                       (4, ref('group_fund_user')),
+                   ]"/>
+            <field name="domain_force">
+                [('company_id', 'in', company_ids)]
+            </field>
+            <field name="perm_read"  eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <record id="rule_fund_container_company"
+                model="ir.rule">
+            <field name="name">
+                Fund Container: Company Filter
+            </field>
+            <field name="model_id"
+                   ref="model_nn_fund_container"/>
+            <field name="groups"
+                   eval="[
+                       (4, ref('group_fund_user')),
+                   ]"/>
+            <field name="domain_force">
+                [('company_id', 'in', company_ids)]
+            </field>
+            <field name="perm_read"  eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <record id="rule_fund_allocation_own"
+                model="ir.rule">
+            <field name="name">
+                Fund Allocation: Own Records Only
+            </field>
+            <field name="model_id"
+                   ref="model_nn_fund_allocation"/>
+            <field name="groups"
+                   eval="[(4, ref('group_fund_user'))]"/>
+            <field name="domain_force">
+                ['|',
+                    ('requested_by', '=', user.id),
+                    ('company_id', 'in', company_ids)
+                ]
+            </field>
+            <field name="perm_read"   eval="True"/>
+            <field name="perm_write"  eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <record id="rule_fund_allocation_finance"
+                model="ir.rule">
+            <field name="name">
+                Fund Allocation: Finance Company Filter
+            </field>
+            <field name="model_id"
+                   ref="model_nn_fund_allocation"/>
+            <field name="groups"
+                   eval="[(4, ref('group_finance_user'))]"/>
+            <field name="domain_force">
+                [('company_id', 'in', company_ids)]
+            </field>
+            <field name="perm_read"   eval="True"/>
+            <field name="perm_write"  eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+    </data>
+</odoo>

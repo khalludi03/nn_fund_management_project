@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.vscode/
+odoo-data/
+*.log
+RUNNING.md
+*.mp4
+*.webm
+*.mov

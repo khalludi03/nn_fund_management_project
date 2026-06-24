@@ -1,0 +1,20 @@
+{
+    'name': 'NN Fund Management',
+    'version': '17.0.1.0.0',
+    'category': 'Accounting',
+    'summary': 'Manage funds, allocations, requisitions, and transfers',
+    'depends': ['mail', 'base'],
+    'data': [
+        'security/groups.xml',
+        'security/ir.model.access.csv',
+        'security/record_rules.xml',
+        'data/sequences.xml',
+        'views/fund_account_views.xml',
+        'views/incoming_fund_views.xml',
+        'views/fund_container_views.xml',
+        'views/approval_config_views.xml',
+        'views/fund_allocation_views.xml',
+    ],
+    'installable': True,
+    'application': True,
+}

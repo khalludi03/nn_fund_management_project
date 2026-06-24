@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_fund_allocation_list" model="ir.ui.view">
+        <field name="name">nn.fund.allocation.list</field>
+        <field name="model">nn.fund.allocation</field>
+        <field name="arch" type="xml">
+            <tree decoration-success="state=='approved'"
+                  decoration-warning="state in ('submitted','gm_approved')"
+                  decoration-danger="state in ('rejected','cancelled')">
+                <field name="name"/>
+                <field name="request_date"/>
+                <field name="fund_account_id"/>
+                <field name="container_id"/>
+                <field name="container_type"
+                       widget="badge"
+                       decoration-info="container_type=='project'"
+                       decoration-warning="container_type=='expense_head'"/>
+                <field name="amount"/>
+                <field name="currency_id" invisible="1"/>
+                <field name="requested_by"/>
+                <field name="state"
+                       widget="badge"
+                       decoration-success="state=='approved'"
+                       decoration-warning="state in ('submitted','gm_approved')"
+                       decoration-danger="state in ('rejected','cancelled')"
+                       decoration-info="state=='draft'"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_fund_allocation_form" model="ir.ui.view">
+        <field name="name">nn.fund.allocation.form</field>
+        <field name="model">nn.fund.allocation</field>
+        <field name="arch" type="xml">
+            <form string="Fund Allocation">
+                <header>
+                    <button name="action_submit"
+                            string="Submit"
+                            type="object"
+                            class="btn-primary"
+                            invisible="state != 'draft'"/>
+                    <button name="action_gm_approve"
+                            string="GM Approve"
+                            type="object"
+                            class="btn-primary"
+                            groups="nn_fund_management.group_gm_approver"
+                            invisible="state != 'submitted'"/>
+                    <button name="action_md_approve"
+                            string="MD Approve"
+                            type="object"
+                            class="btn-primary"
+                            groups="nn_fund_management.group_md_approver"
+                            invisible="state != 'gm_approved'"/>
+                    <button name="action_reject"
+                            string="Reject"
+                            type="object"
+                            class="btn-danger"
+                            groups="nn_fund_management.group_gm_approver"
+                            invisible="state not in ('submitted', 'gm_approved')"/>
+                    <button name="action_cancel"
+                            string="Cancel"
+                            type="object"
+                            groups="nn_fund_management.group_fund_admin"
+                            invisible="state in ('approved','rejected','cancelled')"/>
+                    <field name="state"
+                           widget="statusbar"
+                           statusbar_visible="draft,submitted,gm_approved,approved"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" readonly="1"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Request Details">
+                            <field name="fund_account_id"
+                                   readonly="state != 'draft'"/>
+                            <field name="container_id"
+                                   readonly="state != 'draft'"/>
+                            <field name="container_type"
+                                   readonly="1"/>
+                            <field name="amount"
+                                   readonly="state != 'draft'"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                        <group string="Other Info">
+                            <field name="request_date"
+                                   readonly="state != 'draft'"/>
+                            <field name="requested_by"
+                                   readonly="1"/>
+                            <field name="company_id"
+                                   readonly="1"/>
+                        </group>
+                    </group>
+                    <group string="Purpose">
+                        <field name="purpose"
+                               nolabel="1"
+                               readonly="state != 'draft'"/>
+                    </group>
+                    <group string="Attachments">
+                        <field name="attachment_ids"
+                               widget="many2many_binary"
+                               nolabel="1"/>
+                    </group>
+
+                    <notebook>
+                        <page string="Approval History">
+                            <field name="approval_log_ids" readonly="1">
+                                <tree>
+                                    <field name="date"/>
+                                    <field name="approver_id"/>
+                                    <field name="level"/>
+                                    <field name="action"
+                                           widget="badge"
+                                           decoration-success="action=='approved'"
+                                           decoration-danger="action=='rejected'"/>
+                                    <field name="comment"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_fund_allocation" model="ir.actions.act_window">
+        <field name="name">Fund Allocations</field>
+        <field name="res_model">nn.fund.allocation</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <menuitem
+        id="menu_fund_allocation"
+        name="Allocations"
+        parent="menu_fund_management_root"
+        action="action_fund_allocation"
+        sequence="30"/>
+
+</odoo>

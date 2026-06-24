@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_approval_config_form" model="ir.ui.view">
+        <field name="name">nn.approval.config.form</field>
+        <field name="model">nn.approval.config</field>
+        <field name="arch" type="xml">
+            <form string="Approval Configuration">
+                <sheet>
+                    <group>
+                        <field name="company_id"/>
+                        <field name="gm_user_id"/>
+                        <field name="md_user_id"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_approval_config_list" model="ir.ui.view">
+        <field name="name">nn.approval.config.list</field>
+        <field name="model">nn.approval.config</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="company_id"/>
+                <field name="gm_user_id"/>
+                <field name="md_user_id"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="action_approval_config" model="ir.actions.act_window">
+        <field name="name">Approval Configuration</field>
+        <field name="res_model">nn.approval.config</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <menuitem
+        id="menu_approval_config"
+        name="Approval Config"
+        parent="menu_fund_container_root"
+        action="action_approval_config"
+        sequence="30"/>
+
+</odoo>

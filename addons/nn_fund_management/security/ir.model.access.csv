@@ -1,0 +1,17 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_fund_account_user,fund.account.user,model_nn_fund_account,nn_fund_management.group_fund_user,1,0,0,0
+access_fund_account_finance,fund.account.finance,model_nn_fund_account,nn_fund_management.group_finance_user,1,1,1,0
+access_fund_account_admin,fund.account.admin,model_nn_fund_account,nn_fund_management.group_fund_admin,1,1,1,1
+access_incoming_fund_user,nn.incoming.fund.user,model_nn_incoming_fund,nn_fund_management.group_fund_user,1,0,0,0
+access_incoming_fund_finance,nn.incoming.fund.finance,model_nn_incoming_fund,nn_fund_management.group_finance_user,1,1,1,0
+access_incoming_fund_admin,nn.incoming.fund.admin,model_nn_incoming_fund,nn_fund_management.group_fund_admin,1,1,1,1
+access_fund_container_user,nn.fund.container.user,model_nn_fund_container,nn_fund_management.group_fund_user,1,0,0,0
+access_fund_container_finance,nn.fund.container.finance,model_nn_fund_container,nn_fund_management.group_finance_user,1,1,1,0
+access_fund_container_admin,nn.fund.container.admin,model_nn_fund_container,nn_fund_management.group_fund_admin,1,1,1,1
+access_approval_config_user,nn.approval.config.user,model_nn_approval_config,nn_fund_management.group_fund_user,1,0,0,0
+access_approval_config_admin,nn.approval.config.admin,model_nn_approval_config,nn_fund_management.group_fund_admin,1,1,1,1
+access_approval_log_user,nn.approval.log.user,model_nn_approval_log,nn_fund_management.group_fund_user,1,0,0,0
+access_approval_log_admin,nn.approval.log.admin,model_nn_approval_log,nn_fund_management.group_fund_admin,1,1,1,1
+access_fund_allocation_user,nn.fund.allocation.user,model_nn_fund_allocation,nn_fund_management.group_fund_user,1,1,1,0
+access_fund_allocation_finance,nn.fund.allocation.finance,model_nn_fund_allocation,nn_fund_management.group_finance_user,1,1,0,0
+access_fund_allocation_admin,nn.fund.allocation.admin,model_nn_fund_allocation,nn_fund_management.group_fund_admin,1,1,1,1

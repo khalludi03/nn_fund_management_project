@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ── List View ── -->
+    <record id="view_incoming_fund_list" model="ir.ui.view">
+        <field name="name">nn.incoming.fund.list</field>
+        <field name="model">nn.incoming.fund</field>
+        <field name="arch" type="xml">
+            <tree decoration-success="state=='confirmed'"
+                  decoration-muted="state=='cancelled'">
+                <field name="name"/>
+                <field name="date"/>
+                <field name="fund_account_id"/>
+                <field name="transaction_ref"/>
+                <field name="sender"/>
+                <field name="amount"/>
+                <field name="currency_id" invisible="1"/>
+                <field name="state"
+                       widget="badge"
+                       decoration-success="state=='confirmed'"
+                       decoration-warning="state=='draft'"
+                       decoration-danger="state=='cancelled'"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- ── Form View ── -->
+    <record id="view_incoming_fund_form" model="ir.ui.view">
+        <field name="name">nn.incoming.fund.form</field>
+        <field name="model">nn.incoming.fund</field>
+        <field name="arch" type="xml">
+            <form string="Incoming Fund">
+                <header>
+                    <button name="action_confirm"
+                            string="Confirm"
+                            type="object"
+                            class="btn-primary"
+                            groups="nn_fund_management.group_finance_user"
+                            invisible="state != 'draft'"/>
+                    <button name="action_cancel"
+                            string="Cancel"
+                            type="object"
+                            class="btn-danger"
+                            invisible="state != 'draft'"/>
+                    <field name="state"
+                           widget="statusbar"
+                           statusbar_visible="draft,confirmed,cancelled"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" readonly="1"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Fund Details">
+                            <field name="fund_account_id"/>
+                            <field name="date"/>
+                            <field name="amount"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                        <group string="Transaction Info">
+                            <field name="transaction_ref"/>
+                            <field name="sender"/>
+                            <field name="company_id"/>
+                        </group>
+                    </group>
+                    <group string="Description">
+                        <field name="description" nolabel="1"/>
+                    </group>
+                    <group string="Attachments">
+                        <field name="attachment_ids"
+                               widget="many2many_binary"
+                               nolabel="1"/>
+                    </group>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <!-- ── Action ── -->
+    <record id="action_incoming_fund" model="ir.actions.act_window">
+        <field name="name">Incoming Funds</field>
+        <field name="res_model">nn.incoming.fund</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <!-- ── Menu ── -->
+    <menuitem
+        id="menu_incoming_fund"
+        name="Incoming Funds"
+        parent="menu_fund_management_root"
+        action="action_incoming_fund"
+        sequence="20"/>
+
+</odoo>
