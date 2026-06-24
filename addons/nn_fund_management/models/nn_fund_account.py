@@ -8,7 +8,6 @@ class NnFundAccount(models.Model):
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _order = 'name'
 
-    # ── Basic Info ───────────────────────────────────────
     name = fields.Char(
         string='Account Name',
         required=True,
@@ -43,35 +42,32 @@ class NnFundAccount(models.Model):
     description = fields.Text(string='Description')
     active = fields.Boolean(default=True, tracking=True)
 
-    # ── Reverse Relation ─────────────────────────────────
-    # nn.incoming.fund এর সব record এখানে link থাকবে
     incoming_fund_ids = fields.One2many(
         'nn.incoming.fund',
         'fund_account_id',
         string='Incoming Funds',
     )
 
-    # ── Balance Fields ───────────────────────────────────
     total_received = fields.Monetary(
         string='Total Received',
         compute='_compute_balances',
         store=True,
         currency_field='currency_id',
-        help='সব confirmed incoming fund এর মোট',
+        help='Total from all confirmed incoming funds',
     )
     amount_on_hold = fields.Monetary(
         string='Amount on Hold',
         compute='_compute_balances',
         store=True,
         currency_field='currency_id',
-        help='Pending allocation এ আটকে থাকা টাকা',
+        help='Amount held in pending allocations',
     )
     total_assigned = fields.Monetary(
         string='Total Assigned',
         compute='_compute_balances',
         store=True,
         currency_field='currency_id',
-        help='Approved allocation এর মোট',
+        help='Total of approved allocations',
     )
     available_unassigned_balance = fields.Monetary(
         string='Available Unassigned Balance',
@@ -81,23 +77,12 @@ class NnFundAccount(models.Model):
         help='Total Received - On Hold - Assigned',
     )
 
-    # ── Compute ──────────────────────────────────────────
     @api.depends(
         'incoming_fund_ids.state',
         'incoming_fund_ids.amount',
     )
     def _compute_balances(self):
-        """
-        এখন শুধু incoming fund থেকে
-        total_received calculate হচ্ছে।
-
-        allocation model তৈরি হলে
-        amount_on_hold ও total_assigned
-        আপডেট করা হবে।
-        """
         for rec in self:
-            # ── Total Received ──────────────────────────
-            # শুধু confirmed incoming fund count করবো
             confirmed_funds = rec.incoming_fund_ids.filtered(
                 lambda f: f.state == 'confirmed'
             )
@@ -105,25 +90,31 @@ class NnFundAccount(models.Model):
                 confirmed_funds.mapped('amount')
             )
 
-            # ── On Hold ─────────────────────────────────
-            # nn.fund.allocation তৈরি হলে আসবে
-            rec.amount_on_hold = 0.0
+            hold_alloc = self.env['nn.fund.allocation'].search([
+                ('fund_account_id', '=', rec.id),
+                ('state', 'in', ('submitted', 'gm_approved')),
+            ])
+            rec.amount_on_hold = sum(
+                hold_alloc.mapped('amount')
+            )
 
-            # ── Total Assigned ───────────────────────────
-            # nn.fund.allocation তৈরি হলে আসবে
-            rec.total_assigned = 0.0
+            approved_alloc = self.env['nn.fund.allocation'].search([
+                ('fund_account_id', '=', rec.id),
+                ('state', '=', 'approved'),
+            ])
+            rec.total_assigned = sum(
+                approved_alloc.mapped('amount')
+            )
 
-            # ── Available Unassigned ─────────────────────
             rec.available_unassigned_balance = (
                 rec.total_received
                 - rec.amount_on_hold
                 - rec.total_assigned
             )
 
-    # ── Constraints ──────────────────────────────────────
     @api.constrains('code', 'company_id')
     def _check_unique_code(self):
-        """একই company তে duplicate code চলবে না"""
+        """No duplicate code allowed within the same company"""
         for rec in self:
             if rec.code:
                 duplicate = self.search([
@@ -137,7 +128,6 @@ class NnFundAccount(models.Model):
                         f"in '{rec.company_id.name}'."
                     )
 
-    # ── Display Name ─────────────────────────────────────
     def name_get(self):
         result = []
         for rec in self:

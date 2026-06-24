@@ -25,6 +25,7 @@ services:
       HOST: db
       USER: odoo
       PASSWORD: odoo
+      DB_FILTER: ^db$
     restart: unless-stopped
 
 volumes:

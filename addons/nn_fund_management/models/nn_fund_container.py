@@ -8,7 +8,6 @@ class NnFundContainer(models.Model):
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _order = 'container_type, name'
 
-    # ── Basic Info ───────────────────────────────────────
     name = fields.Char(
         string='Name',
         required=True,
@@ -43,58 +42,56 @@ class NnFundContainer(models.Model):
     description = fields.Text(string='Description')
     active = fields.Boolean(default=True, tracking=True)
 
-    # ── Balance Fields (সব computed) ────────────────────
     total_allocated = fields.Monetary(
         string='Total Allocated',
         compute='_compute_balances',
         store=True,
         currency_field='currency_id',
-        help='Approved allocation থেকে আসা মোট টাকা',
+        help='Total from approved allocations',
     )
     requisition_hold = fields.Monetary(
         string='Requisition Hold',
         compute='_compute_balances',
         store=True,
         currency_field='currency_id',
-        help='Pending requisition এ আটকে থাকা টাকা',
+        help='Amount held in pending requisitions',
     )
     transfer_hold = fields.Monetary(
         string='Transfer Hold',
         compute='_compute_balances',
         store=True,
         currency_field='currency_id',
-        help='Pending transfer এ আটকে থাকা টাকা',
+        help='Amount held in pending transfers',
     )
     incoming_transfer = fields.Monetary(
         string='Incoming Transfers',
         compute='_compute_balances',
         store=True,
         currency_field='currency_id',
-        help='অন্য container থেকে approved transfer এসেছে',
+        help='Approved transfers received from other containers',
     )
     outgoing_transfer = fields.Monetary(
         string='Outgoing Transfers',
         compute='_compute_balances',
         store=True,
         currency_field='currency_id',
-        help='অন্য container এ approved transfer গেছে',
+        help='Approved transfers sent to other containers',
     )
     total_spent = fields.Monetary(
         string='Total Spent',
         compute='_compute_balances',
         store=True,
         currency_field='currency_id',
-        help='Posted bill এর মোট পরিমাণ',
+        help='Total amount of posted bills',
     )
     available_balance = fields.Monetary(
         string='Available Balance',
         compute='_compute_balances',
         store=True,
         currency_field='currency_id',
-        help='এখন requisition বা transfer করা যাবে এই পরিমাণ',
+        help='Amount available for requisitions or transfers',
     )
 
-    # ── Reverse Relation ─────────────────────────────────
     allocation_ids = fields.One2many(
         'nn.fund.allocation',
         'container_id',
@@ -106,7 +103,6 @@ class NnFundContainer(models.Model):
         string='Requisitions',
     )
 
-    # ── Compute ──────────────────────────────────────────
     @api.depends(
         'allocation_ids.state',
         'allocation_ids.amount',
@@ -115,7 +111,6 @@ class NnFundContainer(models.Model):
     )
     def _compute_balances(self):
         for rec in self:
-            # ── Total Allocated ───────────────────────────
             approved_alloc = self.env['nn.fund.allocation'].search([
                 ('container_id', '=', rec.id),
                 ('state', '=', 'approved'),
@@ -124,7 +119,6 @@ class NnFundContainer(models.Model):
                 approved_alloc.mapped('amount')
             )
 
-            # ── Requisition Hold ──────────────────────────
             hold_reqs = self.env['nn.fund.requisition'].search([
                 ('container_id', '=', rec.id),
                 ('state', 'in', (
@@ -135,15 +129,12 @@ class NnFundContainer(models.Model):
                 hold_reqs.mapped('amount')
             )
 
-            # ── Total Spent ───────────────────────────────
             rec.total_spent = 0.0
 
-            # ── Transfer fields (placeholder) ────────────
             rec.transfer_hold     = 0.0
             rec.incoming_transfer = 0.0
             rec.outgoing_transfer = 0.0
 
-            # ── Available Balance ─────────────────────────
             rec.available_balance = (
                 rec.total_allocated
                 + rec.incoming_transfer
@@ -153,10 +144,9 @@ class NnFundContainer(models.Model):
                 - rec.total_spent
             )
 
-    # ── Constraints ──────────────────────────────────────
     @api.constrains('code', 'company_id')
     def _check_unique_code(self):
-        """একই company তে duplicate code চলবে না"""
+        """No duplicate code allowed within the same company"""
         for rec in self:
             duplicate = self.search([
                 ('code',       '=', rec.code),
@@ -171,15 +161,14 @@ class NnFundContainer(models.Model):
 
     @api.constrains('available_balance')
     def _check_no_negative_balance(self):
-        """Negative balance কখনো allow করা যাবে না"""
+        """Negative balance is never allowed"""
         for rec in self:
             if rec.available_balance < 0:
                 raise ValidationError(
-                    f"'{rec.name}' এর available balance "
-                    f"negative হতে পারবে না।"
+                    f"'{rec.name}'s available balance "
+                    f"cannot be negative."
                 )
 
-    # ── Display Name ─────────────────────────────────────
     def name_get(self):
         result = []
         for rec in self:

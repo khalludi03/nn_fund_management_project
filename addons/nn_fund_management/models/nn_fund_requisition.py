@@ -8,7 +8,6 @@ class NnFundRequisition(models.Model):
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _order = 'request_date desc, id desc'
 
-    # ── Basic Fields ─────────────────────────────────────
     name = fields.Char(
         string='Requisition Number',
         required=True,
@@ -71,7 +70,6 @@ class NnFundRequisition(models.Model):
         default=lambda self: self.env.company,
     )
 
-    # ── State ────────────────────────────────────────────
     state = fields.Selection([
         ('draft',       'Draft'),
         ('submitted',   'Submitted'),
@@ -86,7 +84,6 @@ class NnFundRequisition(models.Model):
        copy=False,
     )
 
-    # ── Bill Tracking ─────────────────────────────────────
     bill_ids = fields.One2many(
         'nn.fund.bill',
         'requisition_id',
@@ -106,7 +103,6 @@ class NnFundRequisition(models.Model):
         currency_field='currency_id',
     )
 
-    # ── Approval Log ─────────────────────────────────────
     approval_log_ids = fields.One2many(
         'nn.approval.log',
         'requisition_id',
@@ -114,7 +110,6 @@ class NnFundRequisition(models.Model):
         readonly=True,
     )
 
-    # ── Sequence ─────────────────────────────────────────
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
@@ -124,7 +119,6 @@ class NnFundRequisition(models.Model):
                 ) or 'New'
         return super().create(vals_list)
 
-    # ── Compute: Bill Amounts ─────────────────────────────
     @api.depends(
         'bill_ids.state',
         'bill_ids.amount',
@@ -144,7 +138,6 @@ class NnFundRequisition(models.Model):
                 else 0.0
             )
 
-    # ── Constraints ──────────────────────────────────────
     @api.constrains('amount')
     def _check_positive_amount(self):
         for rec in self:
@@ -161,7 +154,6 @@ class NnFundRequisition(models.Model):
                     "Required date cannot be before request date."
                 )
 
-    # ── Helper: get approval config ───────────────────────
     def _get_approval_config(self):
         config = self.env['nn.approval.config'].search([
             ('company_id', '=', self.company_id.id)
@@ -173,7 +165,6 @@ class NnFundRequisition(models.Model):
             )
         return config
 
-    # ── Action: Submit ────────────────────────────────────
     def action_submit(self):
         for rec in self:
             if rec.state != 'draft':
@@ -181,7 +172,6 @@ class NnFundRequisition(models.Model):
                     "Only draft records can be submitted."
                 )
 
-            # ── Balance Check ─────────────────────────────
             available = rec.container_id.available_balance
             if rec.amount > available:
                 raise ValidationError(
@@ -191,14 +181,13 @@ class NnFundRequisition(models.Model):
                 )
 
             rec.state = 'submitted'
-            rec.container_id._compute_balances()
+            rec.container_id.sudo()._compute_balances()
             rec.message_post(
                 body=f"Requisition submitted by "
                      f"{rec.env.user.name}. "
                      f"Amount {rec.amount:,.2f} placed on hold."
             )
 
-    # ── Action: GM Approve ────────────────────────────────
     def action_gm_approve(self):
         for rec in self:
             if rec.state != 'submitted':
@@ -231,7 +220,6 @@ class NnFundRequisition(models.Model):
                 body=f"GM approved by {rec.env.user.name}."
             )
 
-    # ── Action: MD Approve ────────────────────────────────
     def action_md_approve(self):
         for rec in self:
             if rec.state != 'gm_approved':
@@ -265,7 +253,6 @@ class NnFundRequisition(models.Model):
                      f"Amount {rec.amount:,.2f} reserved for bills."
             )
 
-    # ── Action: Reject ────────────────────────────────────
     def action_reject(self):
         for rec in self:
             if rec.state not in ('submitted', 'gm_approved'):
@@ -299,14 +286,13 @@ class NnFundRequisition(models.Model):
             })
 
             rec.state = 'rejected'
-            rec.container_id._compute_balances()
+            rec.container_id.sudo()._compute_balances()
             rec.message_post(
                 body=f"Rejected by {current_user.name}. "
                      f"Amount {rec.amount:,.2f} returned to "
                      f"available balance."
             )
 
-    # ── Action: Cancel ────────────────────────────────────
     def action_cancel(self):
         for rec in self:
             if rec.state in ('approved', 'rejected',
@@ -315,12 +301,11 @@ class NnFundRequisition(models.Model):
                     "Cannot cancel in this state."
                 )
             rec.state = 'cancelled'
-            rec.container_id._compute_balances()
+            rec.container_id.sudo()._compute_balances()
             rec.message_post(
                 body=f"Cancelled by {rec.env.user.name}."
             )
 
-    # ── Action: Close ─────────────────────────────────────
     def action_close(self):
         for rec in self:
             if rec.state != 'approved':
@@ -330,7 +315,7 @@ class NnFundRequisition(models.Model):
 
             unused = rec.remaining_billable
             rec.state = 'closed'
-            rec.container_id._compute_balances()
+            rec.container_id.sudo()._compute_balances()
             rec.message_post(
                 body=f"Closed by {rec.env.user.name}. "
                      f"Unused amount {unused:,.2f} "

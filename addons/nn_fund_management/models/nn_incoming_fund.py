@@ -8,7 +8,6 @@ class NnIncomingFund(models.Model):
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _order = 'date desc, id desc'
 
-    # ── Basic Fields ─────────────────────────────────────
     name = fields.Char(
         string='Reference',
         required=True,
@@ -69,7 +68,6 @@ class NnIncomingFund(models.Model):
        copy=False,
     )
 
-    # ── Sequence ─────────────────────────────────────────
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
@@ -79,10 +77,9 @@ class NnIncomingFund(models.Model):
                 ) or 'New'
         return super().create(vals_list)
 
-    # ── Constraints ──────────────────────────────────────
     @api.constrains('transaction_ref', 'fund_account_id')
     def _check_unique_transaction_ref(self):
-        """একই fund account এ same transaction ref দুইবার চলবে না"""
+        """Duplicate transaction reference not allowed for same fund account"""
         for rec in self:
             duplicate = self.search([
                 ('transaction_ref', '=', rec.transaction_ref),
@@ -101,20 +98,19 @@ class NnIncomingFund(models.Model):
     def _check_positive_amount(self):
         for rec in self:
             if rec.amount <= 0:
-                raise ValidationError("Amount অবশ্যই শূন্যের বেশি হতে হবে।")
+                raise ValidationError("Amount must be greater than zero.")
 
-    # ── Actions ──────────────────────────────────────────
     def action_confirm(self):
-        """Finance user confirm করলে unassigned balance বাড়বে"""
+        """Finance user confirmation increases unassigned balance"""
         for rec in self:
             if not self.env.user.has_group(
                 'nn_fund_management.group_finance_user'
             ):
                 raise UserError(
-                    "শুধু Finance User incoming fund confirm করতে পারবে।"
+                    "Only Finance User can confirm incoming funds."
                 )
             if rec.state != 'draft':
-                raise ValidationError("শুধু Draft record confirm করা যাবে।")
+                raise ValidationError("Only draft records can be confirmed.")
             rec.state = 'confirmed'
             rec.fund_account_id._compute_balances()
 
@@ -122,7 +118,7 @@ class NnIncomingFund(models.Model):
         for rec in self:
             if rec.state == 'confirmed':
                 raise ValidationError(
-                    "Confirmed fund cancel করতে পারবে না। "
-                    "Reversal entry করো।"
+                    "Cannot cancel a confirmed fund. "
+                    "Create a reversal entry instead."
                 )
             rec.state = 'cancelled'

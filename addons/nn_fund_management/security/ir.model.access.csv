@@ -11,6 +11,8 @@ access_fund_container_admin,nn.fund.container.admin,model_nn_fund_container,nn_f
 access_approval_config_user,nn.approval.config.user,model_nn_approval_config,nn_fund_management.group_fund_user,1,0,0,0
 access_approval_config_admin,nn.approval.config.admin,model_nn_approval_config,nn_fund_management.group_fund_admin,1,1,1,1
 access_approval_log_user,nn.approval.log.user,model_nn_approval_log,nn_fund_management.group_fund_user,1,0,0,0
+access_approval_log_gm,nn.approval.log.gm,model_nn_approval_log,nn_fund_management.group_gm_approver,1,1,1,1
+access_approval_log_md,nn.approval.log.md,model_nn_approval_log,nn_fund_management.group_md_approver,1,1,1,1
 access_approval_log_admin,nn.approval.log.admin,model_nn_approval_log,nn_fund_management.group_fund_admin,1,1,1,1
 access_fund_allocation_user,nn.fund.allocation.user,model_nn_fund_allocation,nn_fund_management.group_fund_user,1,1,1,0
 access_fund_allocation_finance,nn.fund.allocation.finance,model_nn_fund_allocation,nn_fund_management.group_finance_user,1,1,0,0

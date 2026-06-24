@@ -6,8 +6,6 @@ class NnApprovalLog(models.Model):
     _description = 'Approval Log'
     _order = 'date desc'
 
-    # কোন document এর log — এখন allocation
-    # পরে requisition ও transfer ও এই model use করবে
     allocation_id = fields.Many2one(
         'nn.fund.allocation',
         string='Allocation',
