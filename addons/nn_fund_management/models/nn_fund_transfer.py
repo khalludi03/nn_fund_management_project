@@ -135,6 +135,13 @@ class NnFundTransfer(models.Model):
                     "Only draft records can be submitted."
                 )
 
+            if rec.env.user != rec.requested_by and not rec.env.user.has_group(
+                'nn_fund_management.group_finance_user'
+            ):
+                raise UserError(
+                    "Only the requester or a Finance User can submit."
+                )
+
             available = rec.source_id.available_balance
             if rec.amount > available:
                 raise ValidationError(
@@ -262,7 +269,15 @@ class NnFundTransfer(models.Model):
 
     def action_cancel(self):
         for rec in self:
-            if rec.state == 'approved':
+            if rec.state in ('draft', 'submitted', 'gm_approved'):
+                if rec.env.user != rec.requested_by and not rec.env.user.has_group(
+                    'nn_fund_management.group_finance_user'
+                ):
+                    raise UserError(
+                        "Only the requester or a Finance User can cancel "
+                        "this transfer."
+                    )
+            elif rec.state == 'approved':
                 if not self.env.user.has_group(
                     'nn_fund_management.group_fund_admin'
                 ):

@@ -205,5 +205,65 @@
             <field name="perm_unlink" eval="False"/>
         </record>
 
+        <record id="rule_incoming_fund_finance"
+                model="ir.rule">
+            <field name="name">
+                Incoming Fund: Finance Company Filter
+            </field>
+            <field name="model_id"
+                   ref="model_nn_incoming_fund"/>
+            <field name="groups"
+                   eval="[
+                       (4, ref('group_finance_user')),
+                       (4, ref('group_fund_admin')),
+                   ]"/>
+            <field name="domain_force">
+                [('company_id', 'in', company_ids)]
+            </field>
+            <field name="perm_read"   eval="True"/>
+            <field name="perm_write"  eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <record id="rule_fund_container_finance"
+                model="ir.rule">
+            <field name="name">
+                Fund Container: Finance Company Filter
+            </field>
+            <field name="model_id"
+                   ref="model_nn_fund_container"/>
+            <field name="groups"
+                   eval="[
+                       (4, ref('group_finance_user')),
+                       (4, ref('group_fund_admin')),
+                   ]"/>
+            <field name="domain_force">
+                [('company_id', 'in', company_ids)]
+            </field>
+            <field name="perm_read"   eval="True"/>
+            <field name="perm_write"  eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <record id="rule_fund_account_admin"
+                model="ir.rule">
+            <field name="name">
+                Fund Account: Admin Company Filter
+            </field>
+            <field name="model_id"
+                   ref="model_nn_fund_account"/>
+            <field name="groups"
+                   eval="[(4, ref('group_fund_admin'))]"/>
+            <field name="domain_force">
+                [('company_id', 'in', company_ids)]
+            </field>
+            <field name="perm_read"   eval="True"/>
+            <field name="perm_write"  eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
     </data>
 </odoo>

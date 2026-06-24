@@ -116,6 +116,12 @@ class NnIncomingFund(models.Model):
 
     def action_cancel(self):
         for rec in self:
+            if not self.env.user.has_group(
+                'nn_fund_management.group_finance_user'
+            ):
+                raise UserError(
+                    "Only a Finance User can cancel incoming funds."
+                )
             if rec.state == 'confirmed':
                 raise ValidationError(
                     "Cannot cancel a confirmed fund. "

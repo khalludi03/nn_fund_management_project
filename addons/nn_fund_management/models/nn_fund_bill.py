@@ -144,6 +144,13 @@ class NnFundBill(models.Model):
                     raise UserError(
                         "Only an Administrator can cancel a posted bill."
                     )
+            elif rec.state == 'draft':
+                if not self.env.user.has_group(
+                    'nn_fund_management.group_finance_user'
+                ):
+                    raise UserError(
+                        "Only a Finance User can cancel a draft bill."
+                    )
             elif rec.state == 'cancelled':
                 raise UserError("Bill is already cancelled.")
             rec.state = 'cancelled'
