@@ -1,11 +1,15 @@
 from odoo import api, fields, models
-from odoo.exceptions import ValidationError, UserError
+from odoo.exceptions import ValidationError
 
 
 class NnFundAllocation(models.Model):
     _name = 'nn.fund.allocation'
     _description = 'Fund Allocation'
-    _inherit = ['mail.thread', 'mail.activity.mixin']
+    _inherit = [
+        'mail.thread',
+        'mail.activity.mixin',
+        'nn.approval.mixin',
+    ]
     _order = 'request_date desc, id desc'
 
     name = fields.Char(
@@ -94,17 +98,6 @@ class NnFundAllocation(models.Model):
         readonly=True,
     )
 
-    gm_user_id = fields.Many2one(
-        'res.users',
-        string='GM Approver',
-        compute='_compute_approvers',
-    )
-    md_user_id = fields.Many2one(
-        'res.users',
-        string='MD Approver',
-        compute='_compute_approvers',
-    )
-
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
@@ -114,196 +107,60 @@ class NnFundAllocation(models.Model):
                 ) or 'New'
         return super().create(vals_list)
 
-    def _compute_approvers(self):
-        """
-        Find configured approver by company
-        """
-        for rec in self:
-            config = self.env['nn.approval.config'].search([
-                ('company_id', '=', rec.company_id.id)
-            ], limit=1)
-            rec.gm_user_id = config.gm_user_id if config else False
-            rec.md_user_id = config.md_user_id if config else False
+    def _get_balance_source(self):
+        return self.fund_account_id
 
-    @api.constrains('amount')
-    def _check_positive_amount(self):
-        for rec in self:
-            if rec.amount <= 0:
-                raise ValidationError(
-                    "Amount must be greater than zero."
-                )
+    def _get_approval_log_vals(self, level, action):
+        return {
+            'allocation_id': self.id,
+            'approver_id':   self.env.user.id,
+            'level':         level,
+            'action':        action,
+            'date':          fields.Datetime.now(),
+        }
 
-    def _get_approval_config(self):
-        config = self.env['nn.approval.config'].search([
-            ('company_id', '=', self.company_id.id)
-        ], limit=1)
-        if not config:
-            raise UserError(
-                "Approval configuration not found. "
-                "Set GM and MD from the Configuration menu."
-            )
-        return config
-
-    def action_submit(self):
-        for rec in self:
-            if rec.state != 'draft':
-                raise UserError("Only draft records can be submitted.")
-
-            if rec.env.user != rec.requested_by and not rec.env.user.has_group(
-                'nn_fund_management.group_finance_user'
-            ):
-                raise UserError(
-                    "Only the requester or a Finance User can submit."
-                )
-
-            available = rec.fund_account_id.available_unassigned_balance
-            if rec.amount > available:
-                raise ValidationError(
-                    f"Insufficient balance!\n"
-                    f"Available: {available:,.2f}\n"
-                    f"Requested: {rec.amount:,.2f}"
-                )
-
-            rec.state = 'submitted'
-            rec.fund_account_id.sudo()._compute_balances()
-            rec.message_post(
-                body=f"Request submitted by {rec.env.user.name}."
+    def _check_submit_balance(self):
+        available = self.fund_account_id.available_unassigned_balance
+        if self.amount > available:
+            raise ValidationError(
+                f"Insufficient balance!\n"
+                f"Available: {available:,.2f}\n"
+                f"Requested: {self.amount:,.2f}"
             )
 
-    def action_gm_approve(self):
-        for rec in self:
-            if rec.state != 'submitted':
-                raise UserError(
-                    "GM approval is only allowed in Submitted state."
-                )
+    def _on_submit(self):
+        self.message_post(
+            body=f"Request submitted by {self.env.user.name}."
+        )
 
-            config = rec._get_approval_config()
+    def _on_gm_approve(self):
+        self.message_post(
+            body=f"GM approved by {self.env.user.name}."
+        )
 
-            if rec.env.user != config.gm_user_id:
-                raise UserError(
-                    "Only the configured GM can approve this request."
-                )
+    def _on_md_approve(self):
+        self.container_id.sudo()._compute_balances()
+        self.message_post(
+            body=f"MD approved by {self.env.user.name}. "
+                 f"Amount {self.amount:,.2f} allocated to "
+                 f"{self.container_id.name}."
+        )
 
-            if rec.requested_by == rec.env.user:
-                raise UserError(
-                    "You cannot approve your own allocation request."
-                )
+    def _on_reject(self):
+        self.message_post(
+            body=f"Rejected by {self.env.user.name}. "
+                 f"Amount {self.amount:,.2f} returned to "
+                 f"unassigned balance."
+        )
 
-            self.env['nn.approval.log'].create({
-                'allocation_id': rec.id,
-                'approver_id':   rec.env.user.id,
-                'level':         'gm',
-                'action':        'approved',
-                'date':          fields.Datetime.now(),
-            })
+    def _on_cancel(self):
+        self.message_post(
+            body=f"Cancelled by {self.env.user.name}."
+        )
 
-            rec.state = 'gm_approved'
-            rec.message_post(
-                body=f"GM approved by {rec.env.user.name}."
-            )
-
-    def action_md_approve(self):
-        for rec in self:
-            if rec.state != 'gm_approved':
-                raise UserError(
-                    "MD approval is only allowed after GM approval."
-                )
-
-            config = rec._get_approval_config()
-
-            if rec.env.user != config.md_user_id:
-                raise UserError(
-                    "Only the configured MD can approve this request."
-                )
-
-            if rec.requested_by == rec.env.user:
-                raise UserError(
-                    "You cannot approve your own allocation request."
-                )
-
-            self.env['nn.approval.log'].create({
-                'allocation_id': rec.id,
-                'approver_id':   rec.env.user.id,
-                'level':         'md',
-                'action':        'approved',
-                'date':          fields.Datetime.now(),
-            })
-
-            rec.state = 'approved'
-
-            rec.fund_account_id.sudo()._compute_balances()
-            rec.container_id.sudo()._compute_balances()
-
-            rec.message_post(
-                body=f"MD approved by {rec.env.user.name}. "
-                     f"Amount {rec.amount:,.2f} allocated to "
-                     f"{rec.container_id.name}."
-            )
-
-    def action_reject(self):
-        for rec in self:
-            if rec.state not in ('submitted', 'gm_approved'):
-                raise UserError(
-                    "Rejection is only allowed in Submitted or GM Approved state."
-                )
-
-            config = rec._get_approval_config()
-            current_user = rec.env.user
-
-            if rec.state == 'submitted':
-                if current_user != config.gm_user_id:
-                    raise UserError(
-                        "Only the GM can reject at this stage."
-                    )
-                level = 'gm'
-            else:
-                if current_user != config.md_user_id:
-                    raise UserError(
-                        "Only the MD can reject at this stage."
-                    )
-                level = 'md'
-
-            self.env['nn.approval.log'].create({
-                'allocation_id': rec.id,
-                'approver_id':   current_user.id,
-                'level':         level,
-                'action':        'rejected',
-                'date':          fields.Datetime.now(),
-            })
-
-            rec.state = 'rejected'
-
-            rec.fund_account_id.sudo()._compute_balances()
-            rec.message_post(
-                body=f"Rejected by {current_user.name}. "
-                     f"Amount {rec.amount:,.2f} returned to "
-                     f"unassigned balance."
-            )
-
-    def action_cancel(self):
-        for rec in self:
-            if rec.state in ('draft', 'submitted', 'gm_approved'):
-                if rec.env.user != rec.requested_by and not rec.env.user.has_group(
-                    'nn_fund_management.group_finance_user'
-                ):
-                    raise UserError(
-                        "Only the requester or a Finance User can cancel "
-                        "this allocation."
-                    )
-            elif rec.state == 'approved':
-                if not self.env.user.has_group(
-                    'nn_fund_management.group_fund_admin'
-                ):
-                    raise UserError(
-                        "Only Administrator can cancel an approved "
-                        "allocation."
-                    )
-            if rec.state in ('rejected', 'cancelled'):
-                raise UserError(
-                    "Rejected or cancelled records cannot be cancelled again."
-                )
-            rec.state = 'cancelled'
-            rec.fund_account_id.sudo()._compute_balances()
-            rec.message_post(
-                body=f"Cancelled by {rec.env.user.name}."
-            )
+    def _get_cancel_checks(self):
+        return {
+            'requester_or_finance': ('draft', 'submitted', 'gm_approved'),
+            'admin_only': ('approved',),
+            'blocked': ('rejected', 'cancelled'),
+        }

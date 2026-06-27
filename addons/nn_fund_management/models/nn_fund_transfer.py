@@ -1,11 +1,15 @@
 from odoo import api, fields, models
-from odoo.exceptions import ValidationError, UserError
+from odoo.exceptions import ValidationError
 
 
 class NnFundTransfer(models.Model):
     _name = 'nn.fund.transfer'
     _description = 'Fund Transfer'
-    _inherit = ['mail.thread', 'mail.activity.mixin']
+    _inherit = [
+        'mail.thread',
+        'mail.activity.mixin',
+        'nn.approval.mixin',
+    ]
     _order = 'request_date desc, id desc'
 
     name = fields.Char(
@@ -52,16 +56,16 @@ class NnFundTransfer(models.Model):
         string='Reason',
         required=True,
     )
+    request_date = fields.Date(
+        string='Request Date',
+        default=fields.Date.today,
+        required=True,
+        tracking=True,
+    )
     requested_by = fields.Many2one(
         'res.users',
         string='Requested By',
         default=lambda self: self.env.user,
-        required=True,
-        tracking=True,
-    )
-    request_date = fields.Date(
-        string='Request Date',
-        default=fields.Date.today,
         required=True,
         tracking=True,
     )
@@ -101,14 +105,6 @@ class NnFundTransfer(models.Model):
                 ) or 'New'
         return super().create(vals_list)
 
-    @api.constrains('amount')
-    def _check_positive_amount(self):
-        for rec in self:
-            if rec.amount <= 0:
-                raise ValidationError(
-                    "Amount must be greater than zero."
-                )
-
     @api.constrains('source_id', 'destination_id')
     def _check_different_containers(self):
         for rec in self:
@@ -117,182 +113,65 @@ class NnFundTransfer(models.Model):
                     "Source and destination cannot be the same."
                 )
 
-    def _get_approval_config(self):
-        config = self.env['nn.approval.config'].search([
-            ('company_id', '=', self.company_id.id)
-        ], limit=1)
-        if not config:
-            raise UserError(
-                "Approval configuration not found. "
-                "Please set GM and MD from Configuration menu."
-            )
-        return config
+    def _get_balance_source(self):
+        return self.source_id
 
-    def action_submit(self):
-        for rec in self:
-            if rec.state != 'draft':
-                raise UserError(
-                    "Only draft records can be submitted."
-                )
+    def _get_approval_log_vals(self, level, action):
+        return {
+            'transfer_id':   self.id,
+            'approver_id':   self.env.user.id,
+            'level':         level,
+            'action':        action,
+            'date':          fields.Datetime.now(),
+        }
 
-            if rec.env.user != rec.requested_by and not rec.env.user.has_group(
-                'nn_fund_management.group_finance_user'
-            ):
-                raise UserError(
-                    "Only the requester or a Finance User can submit."
-                )
-
-            available = rec.source_id.available_balance
-            if rec.amount > available:
-                raise ValidationError(
-                    f"Insufficient balance in source!\n"
-                    f"Available: {available:,.2f}\n"
-                    f"Transfer amount: {rec.amount:,.2f}"
-                )
-
-            rec.state = 'submitted'
-            rec.source_id.sudo()._compute_balances()
-            rec.message_post(
-                body=f"Transfer submitted by "
-                     f"{rec.env.user.name}. "
-                     f"Amount {rec.amount:,.2f} placed on hold "
-                     f"from source."
+    def _check_submit_balance(self):
+        available = self.source_id.available_balance
+        if self.amount > available:
+            raise ValidationError(
+                f"Insufficient balance in source!\n"
+                f"Available: {available:,.2f}\n"
+                f"Transfer amount: {self.amount:,.2f}"
             )
 
-    def action_gm_approve(self):
-        for rec in self:
-            if rec.state != 'submitted':
-                raise UserError(
-                    "GM approval is only allowed in Submitted state."
-                )
+    def _on_submit(self):
+        self.message_post(
+            body=f"Transfer submitted by "
+                 f"{self.env.user.name}. "
+                 f"Amount {self.amount:,.2f} placed on hold "
+                 f"from source."
+        )
 
-            config = rec._get_approval_config()
+    def _on_gm_approve(self):
+        self.message_post(
+            body=f"GM approved by {self.env.user.name}."
+        )
 
-            if rec.env.user != config.gm_user_id:
-                raise UserError(
-                    "Only the configured GM can approve this request."
-                )
+    def _on_md_approve(self):
+        self.destination_id.sudo()._compute_balances()
+        self.message_post(
+            body=f"MD approved by {self.env.user.name}. "
+                 f"Amount {self.amount:,.2f} transferred to "
+                 f"destination."
+        )
 
-            if rec.requested_by == rec.env.user:
-                raise UserError(
-                    "You cannot approve your own transfer."
-                )
+    def _on_reject(self):
+        self.message_post(
+            body=f"Rejected by {self.env.user.name}. "
+                 f"Amount {self.amount:,.2f} returned to "
+                 f"source balance."
+        )
 
-            self.env['nn.approval.log'].create({
-                'transfer_id':   rec.id,
-                'approver_id':   rec.env.user.id,
-                'level':         'gm',
-                'action':        'approved',
-                'date':          fields.Datetime.now(),
-            })
+    def _on_cancel(self):
+        if self.destination_id:
+            self.destination_id.sudo()._compute_balances()
+        self.message_post(
+            body=f"Cancelled by {self.env.user.name}."
+        )
 
-            rec.state = 'gm_approved'
-            rec.message_post(
-                body=f"GM approved by {rec.env.user.name}."
-            )
-
-    def action_md_approve(self):
-        for rec in self:
-            if rec.state != 'gm_approved':
-                raise UserError(
-                    "MD approval is only allowed after GM approval."
-                )
-
-            config = rec._get_approval_config()
-
-            if rec.env.user != config.md_user_id:
-                raise UserError(
-                    "Only the configured MD can approve this request."
-                )
-
-            if rec.requested_by == rec.env.user:
-                raise UserError(
-                    "You cannot approve your own transfer."
-                )
-
-            self.env['nn.approval.log'].create({
-                'transfer_id':   rec.id,
-                'approver_id':   rec.env.user.id,
-                'level':         'md',
-                'action':        'approved',
-                'date':          fields.Datetime.now(),
-            })
-
-            rec.state = 'approved'
-            rec.source_id.sudo()._compute_balances()
-            rec.destination_id.sudo()._compute_balances()
-            rec.message_post(
-                body=f"MD approved by {rec.env.user.name}. "
-                     f"Amount {rec.amount:,.2f} transferred to "
-                     f"destination."
-            )
-
-    def action_reject(self):
-        for rec in self:
-            if rec.state not in ('submitted', 'gm_approved'):
-                raise UserError(
-                    "Rejection is only allowed in Submitted "
-                    "or GM Approved state."
-                )
-
-            config = rec._get_approval_config()
-            current_user = rec.env.user
-
-            if rec.state == 'submitted':
-                if current_user != config.gm_user_id:
-                    raise UserError(
-                        "Only the GM can reject at this stage."
-                    )
-                level = 'gm'
-            else:
-                if current_user != config.md_user_id:
-                    raise UserError(
-                        "Only the MD can reject at this stage."
-                    )
-                level = 'md'
-
-            self.env['nn.approval.log'].create({
-                'transfer_id':   rec.id,
-                'approver_id':   current_user.id,
-                'level':         level,
-                'action':        'rejected',
-                'date':          fields.Datetime.now(),
-            })
-
-            rec.state = 'rejected'
-            rec.source_id.sudo()._compute_balances()
-            rec.message_post(
-                body=f"Rejected by {current_user.name}. "
-                     f"Amount {rec.amount:,.2f} returned to "
-                     f"source balance."
-            )
-
-    def action_cancel(self):
-        for rec in self:
-            if rec.state in ('draft', 'submitted', 'gm_approved'):
-                if rec.env.user != rec.requested_by and not rec.env.user.has_group(
-                    'nn_fund_management.group_finance_user'
-                ):
-                    raise UserError(
-                        "Only the requester or a Finance User can cancel "
-                        "this transfer."
-                    )
-            elif rec.state == 'approved':
-                if not self.env.user.has_group(
-                    'nn_fund_management.group_fund_admin'
-                ):
-                    raise UserError(
-                        "Only an Administrator can cancel an approved "
-                        "transfer."
-                    )
-            elif rec.state in ('rejected', 'cancelled'):
-                raise UserError(
-                    "Cannot cancel in this state."
-                )
-            rec.state = 'cancelled'
-            rec.source_id.sudo()._compute_balances()
-            if rec.destination_id:
-                rec.destination_id.sudo()._compute_balances()
-            rec.message_post(
-                body=f"Cancelled by {rec.env.user.name}."
-            )
+    def _get_cancel_checks(self):
+        return {
+            'requester_or_finance': ('draft', 'submitted', 'gm_approved'),
+            'admin_only': ('approved',),
+            'blocked': ('rejected', 'cancelled'),
+        }
